@@ -1,0 +1,51 @@
+# Compile of arm_single.sv failed with 3 errors.
+# Compile of arm_single.sv failed with 2 errors.
+# Compile of arm_single.sv failed with 1 errors.
+# Compile of arm_single.sv failed with 1 errors.
+# Compile of arm_single.sv was successful.
+vsim -gui work_arm.testbench
+# vsim -gui work_arm.testbench 
+# Start time: 15:51:09 on Jan 31,2025
+# Loading sv_std.std
+# Loading work_arm.testbench
+# Loading work_arm.top
+# Loading work_arm.arm
+# Loading work_arm.controller
+# Loading work_arm.decoder
+# Loading work_arm.condlogic
+# Loading work_arm.flopenr
+# Loading work_arm.condcheck
+# Loading work_arm.datapath
+# Loading work_arm.mux2
+# Loading work_arm.flopr
+# Loading work_arm.adder
+# Loading work_arm.regfile
+# Loading work_arm.extend
+# Loading work_arm.alu
+# Loading work_arm.imem
+# Loading work_arm.dmem
+add wave -position end  sim:/testbench/dut/arm/c/clk
+add wave -position end  sim:/testbench/dut/arm/c/reset
+add wave -position end  sim:/testbench/dut/arm/c/Instr
+add wave -position end  sim:/testbench/dut/arm/c/NoWrite
+add wave -position end  sim:/testbench/dut/arm/c/RegWrite
+add wave -position end  sim:/testbench/dut/arm/dp/rf/rf
+run
+# WARNING: No extended dataflow license exists
+# Error: invalid command name "::.main_pane.dataflow.interior.cs.body.pw.df.c"
+# Error: invalid command name "::.main_pane.dataflow.interior.cs.body.pw.df.c"
+add wave -position end  sim:/testbench/dut/arm/c/ALUFlags
+restart -f
+# ** Note: (vsim-12125) Error and warning message counts have been reset to '0' because of 'restart'.
+run
+restart -f
+# ** Note: (vsim-12125) Error and warning message counts have been reset to '0' because of 'restart'.
+run
+restart -f
+# ** Note: (vsim-12125) Error and warning message counts have been reset to '0' because of 'restart'.
+run
+restart -f
+# ** Note: (vsim-12125) Error and warning message counts have been reset to '0' because of 'restart'.
+run
+# End time: 16:54:49 on Jan 31,2025, Elapsed time: 1:03:40
+# Errors: 44, Warnings: 1
