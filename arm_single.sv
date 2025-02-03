@@ -78,6 +78,11 @@
 // cond = 1110, op = 00
 // funct5 = 1 1101 0; cmd = 1101 (MOV)
 
+// E1500001
+// 1110 0001 0101 0000 0000 0000 0000 0001
+// cond = 1110, op = 00
+// funct5 = 0 1010 1; cmd = 1010 (CMP)
+
 module testbench();
 
   logic        clk;
@@ -189,7 +194,7 @@ module controller(input  logic         clk, reset,
                   output logic         PCSrc);
 
   logic [1:0]   FlagW;
-  logic         PCS, RegW, MemW, MovF;
+  logic         PCS, RegW, MemW, MovF, NoWrite;
   
   decoder dec(
     Instr[27:26],
@@ -197,7 +202,7 @@ module controller(input  logic         clk, reset,
     Instr[15:12],
     FlagW,
     PCS, RegW, MemW,
-    MemtoReg, ALUSrc, MovF,
+    MemtoReg, ALUSrc, MovF, NoWrite,
     ImmSrc, RegSrc, ALUControl
     );
 
@@ -206,7 +211,7 @@ module controller(input  logic         clk, reset,
     Instr[31:28],
     ALUFlags,
     FlagW,
-    PCS, RegW, MemW, MovF,
+    PCS, RegW, MemW, MovF, NoWrite,
     PCSrc, RegWrite, MemWrite, MovFlag
     );
 
@@ -217,7 +222,7 @@ module decoder(input  logic [1:0] Op,
                input  logic [3:0] Rd,
                output logic [1:0] FlagW,
                output logic       PCS, RegW, MemW,
-               output logic       MemtoReg, ALUSrc, MovF,
+               output logic       MemtoReg, ALUSrc, MovF, NoWrite,
                output logic [1:0] ImmSrc, RegSrc, ALUControl);
 
   logic [9:0] controls;
@@ -251,37 +256,44 @@ module decoder(input  logic [1:0] Op,
 
   	    4'b0100: begin
           ALUControl = 2'b00; // ADD
-          // NoWrite = 1'b0;
+          NoWrite = 1'b0;
           MovF = 1'b0;
         end
         
   	    4'b0010: begin
           ALUControl = 2'b01; // SUB
-          // NoWrite = 1'b0;
+          NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
         4'b0000: begin
           ALUControl = 2'b10; // AND
-          // NoWrite = 1'b0;
+          NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
   	    4'b1100: begin
           ALUControl = 2'b11; // ORR
-          // NoWrite = 1'b0;
+          NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
         4'b1101: begin
-          ALUControl = 2'bx;      // unimplemented
-          // NowWrite = 1'b0;
-          MovF = 1'b1;       // MOV
-        end 
+          ALUControl = 2'bx;  // MOV
+          NoWrite = 1'b0;
+          MovF = 1'b1;       
+        end
+
+        4'b1010: begin        // CMP
+          ALUControl = 2'b01; // SUB
+          NoWrite = 1'b1;
+          MovF = 1'b0;   
+
+        end
 
   	    default: begin
           ALUControl = 2'bx;  // unimplemented
-          // NoWrite = 1'b0;
+          NoWrite = 1'b0;
           MovF = 1'b0;
         end 
       endcase
@@ -305,7 +317,7 @@ module condlogic(input  logic       clk, reset,
                  input  logic [3:0] Cond,
                  input  logic [3:0] ALUFlags,
                  input  logic [1:0] FlagW,
-                 input  logic       PCS, RegW, MemW, MovF,
+                 input  logic       PCS, RegW, MemW, MovF, NoWrite,
                  output logic       PCSrc, RegWrite, MemWrite, MovFlag);
                  
   logic [1:0] FlagWrite;
@@ -320,7 +332,7 @@ module condlogic(input  logic       clk, reset,
   // write controls are conditional
   condcheck cc(Cond, Flags, CondEx);
   assign FlagWrite = FlagW & {2{CondEx}};
-  assign RegWrite  = RegW  & CondEx;
+  assign RegWrite  = RegW  & CondEx & ~NoWrite;
   assign MemWrite  = MemW  & CondEx;
   assign PCSrc     = PCS   & CondEx;
   assign MovFlag   = MovF  & CondEx;
