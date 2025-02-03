@@ -83,6 +83,11 @@
 // cond = 1110, op = 00
 // funct5 = 0 1010 1; cmd = 1010 (CMP)
 
+// E1110002
+// 1110 0001 0001 0001 0000 0000 0000 0010
+// cond = 1110, op 00
+// funct5 = 0 1000 1; cmd = 1000 (TST)
+
 module testbench();
 
   logic        clk;
@@ -254,41 +259,47 @@ module decoder(input  logic [1:0] Op,
     if (ALUOp) begin                 // which DP Instr?
       case(Funct[4:1])
 
-  	    4'b0100: begin
+  	    4'b0100: begin        // ADD Instruction
           ALUControl = 2'b00; // ADD
           NoWrite = 1'b0;
           MovF = 1'b0;
         end
         
-  	    4'b0010: begin
+  	    4'b0010: begin        // SUB Instruction
           ALUControl = 2'b01; // SUB
           NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
-        4'b0000: begin
+        4'b0000: begin        // AND Instruction
           ALUControl = 2'b10; // AND
           NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
-  	    4'b1100: begin
+  	    4'b1100: begin        // ORR Instruction
           ALUControl = 2'b11; // ORR
           NoWrite = 1'b0;
           MovF = 1'b0;
         end
 
-        4'b1101: begin
-          ALUControl = 2'bx;  // MOV
+        4'b1101: begin        // MOV Instruction
+          ALUControl = 2'bx;  // anything
           NoWrite = 1'b0;
           MovF = 1'b1;       
         end
 
-        4'b1010: begin        // CMP
+        4'b1010: begin        // CMP Instruction
           ALUControl = 2'b01; // SUB
           NoWrite = 1'b1;
           MovF = 1'b0;   
 
+        end
+
+        4'b1000: begin        // TST Instruction
+          ALUControl = 2'b10; // AND
+          NoWrite = 1'b1;
+          MovF = 1'b0;
         end
 
   	    default: begin
