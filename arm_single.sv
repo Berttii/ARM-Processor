@@ -98,12 +98,13 @@ module testbench();
 
   logic        clk;
   logic        reset;
+  logic        clkTimer;
 
   logic [31:0] WriteData, DataAdr;
   logic        MemWrite;
 
   // instantiate device to be tested
-  top dut(clk, reset, WriteData, DataAdr, MemWrite);
+  top dut(clk, reset, clkTimer, WriteData, DataAdr, MemWrite);
   
   // initialize test
   initial
@@ -115,6 +116,17 @@ module testbench();
   always
     begin
       clk <= 1; # 5; clk <= 0; # 5;
+    end
+
+  // generate timer clock to sequence tests
+  always
+    begin
+
+      // simulator time unit: 1ps
+      // if we have 1.000.000 (one milion) period time units, then clkTimer = 1MHz
+
+      clkTimer <= 1; # 10; clkTimer <= 0; # 10;   // 500 thousand + 500 thousand = 1 million (period)
+
     end
 
   // check results
@@ -132,29 +144,70 @@ module testbench();
   //   end
 endmodule
 
-module top(input  logic        clk, reset, 
-           output logic [31:0] WriteData, DataAdr, 
-           output logic        MemWrite);
+module top(
+  input   logic            clk, reset, clkTimer,
+  output  logic [31:0]     WriteData, DataAdr,
+  output  logic            MemWrite
+  );
 
   logic [31:0] PC, Instr, ReadData;
+  logic [31:0] CPUTimeRequested;
+  logic [31:0] CountEnable;
+  logic [31:0] CountCheck;
   
   // instantiate processor and memories
   arm arm(clk, reset, PC, Instr, MemWrite, DataAdr, 
           WriteData, ReadData);
   imem imem(PC, Instr);
-  dmem dmem(clk, MemWrite, DataAdr, WriteData, ReadData);
+  dmem dmem(clk, MemWrite, DataAdr, WriteData, CPUTimeRequested, CountEnable, CountCheck, ReadData);
+  timer timer(clkTimer, CPUTimeRequested, CountEnable, CountCheck);
 endmodule
 
-module dmem(input  logic        clk, we,
-            input  logic [31:0] a, wd,
-            output logic [31:0] rd);
+module timer(
+  input   logic           clkTimer,
+  input   logic [31:0]    CPUTimeRequested,       // time requested from CPU to timer hardware
+  input   logic [31:0]    CountEnable,            // Enable counting for timer
+  output  logic [31:0]    CountCheck              // bit word reporting counting status
+  );
+
+  logic [31:0] count = 32'b0;
+
+  always_ff @(posedge clkTimer) begin
+    if (CountEnable[1] & count < CPUTimeRequested)
+      count++;
+
+    else if (CountEnable[1] === 1'b0 || count === CPUTimeRequested) begin
+        count <= 32'b0;           // reset count
+        CountCheck = 32'd9;     // CountCheck[0] = 1'b1 --> Stop counting in dmem
+    end
+    
+  end
+
+  
+endmodule
+
+module dmem(
+  input   logic           clk, we,
+  input   logic [31:0]    a, wd,
+  output  logic [31:0]    CPUTimeRequested,
+  output  logic [31:0]    CountEnable,
+  output  logic [31:0]    CountCheck,
+  output  logic [31:0]    rd
+  );
 
   logic [31:0] RAM[63:0];
 
-  assign rd = RAM[a[31:2]]; // word aligned
+  assign rd = RAM[a[31:2]];               // word aligned
+  assign CPUTimeRequested = RAM[50];      // memory index for time requested (CPUTimeRequested value is saved here)
+  assign CountEnable = RAM[51];           // memory index for count enabler (start/stop counting flag)
 
-  always_ff @(posedge clk)
-    if (we) RAM[a[31:2]] <= wd;
+  always_ff @(posedge clk) begin
+    if (we)
+      RAM[a[31:2]] <= wd;
+
+    if (CountCheck[0] === 1'b1)
+      RAM[51] <= CountCheck;              // saving CountCheck in RAM[51] --> CountEnable[1] == 0 --> not counting in timer module.
+  end
 endmodule
 
 module imem(input  logic [31:0] a,
