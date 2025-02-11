@@ -159,7 +159,7 @@ module top(
   arm arm(clk, reset, PC, Instr, MemWrite, DataAdr, 
           WriteData, ReadData);
   imem imem(PC, Instr);
-  dmem dmem(clk, MemWrite, DataAdr, WriteData, CPUTimeRequested, CountEnable, CountCheck, ReadData);
+  dmem dmem(clk, MemWrite, DataAdr, WriteData, CountCheck, CPUTimeRequested, CountEnable, ReadData);
   timer timer(clkTimer, CPUTimeRequested, CountEnable, CountCheck);
 endmodule
 
@@ -178,7 +178,7 @@ module timer(
 
     else if (CountEnable[1] === 1'b0 || count === CPUTimeRequested) begin
         count <= 32'b0;           // reset count
-        CountCheck = 32'd9;     // CountCheck[0] = 1'b1 --> Stop counting in dmem
+        CountCheck = 32'b1;     // CountCheck[0] = 1'b1 --> Stop counting in dmem
     end
     
   end
@@ -189,9 +189,9 @@ endmodule
 module dmem(
   input   logic           clk, we,
   input   logic [31:0]    a, wd,
+  input   logic [31:0]    CountCheck,
   output  logic [31:0]    CPUTimeRequested,
   output  logic [31:0]    CountEnable,
-  output  logic [31:0]    CountCheck,
   output  logic [31:0]    rd
   );
 
