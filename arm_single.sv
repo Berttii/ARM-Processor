@@ -129,19 +129,6 @@ module testbench();
 
     end
 
-  // check results
-  // always @(negedge clk)
-  //   begin
-  //     if(MemWrite) begin
-  //       if(DataAdr === 100 & WriteData === 7) begin
-  //         $display("Simulation succeeded");
-  //         $stop;
-  //       end else if (DataAdr !== 96) begin
-  //         $display("Simulation failed");
-  //         $stop;
-  //       end
-  //     end
-  //   end
 endmodule
 
 module top(
@@ -165,33 +152,32 @@ endmodule
 
 module timer(
   input   logic           clkTimer,
-  input   logic [31:0]    CPUTimeRequested,       // time requested from CPU to timer hardware
-  input   logic [31:0]    CountEnable,            // Enable counting for timer
-  output  logic [31:0]    CountCheck              // bit word reporting counting status
+  input   logic [31:0]    CPUTimeRequested,       // time requested from CPU (dmem) to timer hardware
+  input   logic [31:0]    CountEnable,            // enabler bit word from CPU (dmem) to timer hardware
+  output  logic [31:0]    CountCheck              // bit word response about counting status from timer to CPU (dmem)
   );
 
   logic [31:0] count = 32'b0;
 
   always_ff @(posedge clkTimer) begin
-    if (CountEnable[1] & count < CPUTimeRequested)
+    if (CountEnable[0] & count < CPUTimeRequested)
       count++;
 
-    else if (CountEnable[1] === 1'b0 || count === CPUTimeRequested) begin
-        count <= 32'b0;           // reset count
-        CountCheck = 32'b1;     // CountCheck[0] = 1'b1 --> Stop counting in dmem
+    else if (~CountEnable[0] || count === CPUTimeRequested) begin   // End counting
+        count <= 32'b0;             // reset count
+        CountCheck <= 32'b1;       // CountCheck[0] = 1'b1 --> update data memory (dmem) to disable counting
     end
     
   end
 
-  
 endmodule
 
 module dmem(
   input   logic           clk, we,
   input   logic [31:0]    a, wd,
-  input   logic [31:0]    CountCheck,
-  output  logic [31:0]    CPUTimeRequested,
-  output  logic [31:0]    CountEnable,
+  input   logic [31:0]    CountCheck,             // Response from the timer that says "counting complete"
+  output  logic [31:0]    CPUTimeRequested,       // time requested from CPU to timer hardware
+  output  logic [31:0]    CountEnable,            // Enable counting for timer
   output  logic [31:0]    rd
   );
 
@@ -205,9 +191,10 @@ module dmem(
     if (we)
       RAM[a[31:2]] <= wd;
 
-    if (CountCheck[0] === 1'b1)
-      RAM[51] <= CountCheck;              // saving CountCheck in RAM[51] --> CountEnable[1] == 0 --> not counting in timer module.
+    if (CountCheck[0])
+      RAM[51] <= 32'b0;     // updating RAM[51] --> CountEnable[0] == 0 --> disable counting
   end
+
 endmodule
 
 module imem(input  logic [31:0] a,
